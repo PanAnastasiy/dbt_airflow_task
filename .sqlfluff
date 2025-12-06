@@ -1,0 +1,33 @@
+# .sqlfluff
+
+[sqlfluff]
+# Используем диалект Snowflake, так как это наш основной DW
+dialect = snowflake
+templater = dbt
+max_line_length = 100
+# Игнорируем длинные строки
+ignore_templated_areas = False
+exclude_rules =
+    L010, # Разрешить WITH AS
+    L013, # Разрешить USING
+    L020, # Разрешить WITH RECURSIVE
+    L028, # Разрешить CASE/WHEN
+    L030, # Разрешить звездочки (*)
+    L034, # Разрешить одиночные FROM
+    L042, # Разрешить оконные функции
+
+[sqlfluff:templater:dbt]
+# Указываем sqlfluff, где найти наш dbt-проект
+project_dir = dbt_project/
+
+[sqlfluff:templater:jinja]
+# Разрешить использование Jinja-конструкций
+apply_dbt_builtins = True
+
+[sqlfluff:rules:L014]
+# Требуем, чтобы ключевые слова были в верхнем регистре
+unquoted_identifiers_policy = uppercase
+
+[sqlfluff:rules:L040]
+# Требуем, чтобы ключевые слова SQL (SELECT, FROM, WHERE) были в верхнем регистре
+uppercase_sql_keywords = True

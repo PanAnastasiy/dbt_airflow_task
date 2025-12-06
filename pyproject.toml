@@ -1,0 +1,101 @@
+[project]
+name = ""
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "databricks==0.2",
+    "delta==0.4.2",
+    "duckdb==1.4.2",
+    "english-words==2.0.1",
+    "loguru==0.7.3",
+    "openpyxl==3.1.5",
+    "pandas==2.3.3",
+    "paramiko==3.5.0",
+    "pyspark==4.0.1",
+    "pyyaml==6.0.3",
+    "slackclient==2.9.4",
+    "tqdm==4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "black==25.1.0",
+    "pre-commit>=4.3.0",
+    "pytest>=8.3.3",
+    "ruff>=0.9.7",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+    "F",   # pyflakes
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "Q",   # flake8-quotes
+    "S",   # flake8-bandit
+    "C4",  # flake8-comprehensions
+    "I",   # isort
+    "RUF", # Ruff-specific rules
+    "FA",  # flake8-future-annotations
+    "ISC", # implicit-str-concat
+    "PIE", # flake8-pie
+    "PT",  # flake8-pytest-style
+    "RSE", # flake8-raise
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "N",   # pep8-naming
+    "BLE", # flake8-blind-except
+    "FURB"
+]
+ignore = [
+    "E501",  # line too long
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "S101",  # use of assert
+    "S311",  # use of random
+    "S608",  # SQL injection warning
+    "S301",  # use of pickle
+    "N812", "N817", "N806", "N802", "N803", "N815", "N814",
+    "W191", "E111", "E114", "E117", "D206", "D300",
+    "Q000", "Q001", "Q002", "Q003",
+    "COM812", "COM819", "ISC001", "ISC002",
+]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "single"
