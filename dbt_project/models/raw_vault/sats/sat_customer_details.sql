@@ -1,25 +1,18 @@
-{{ config(
-    materialized='incremental',
-    incremental_strategy='merge',
-    unique_key=['CUSTOMER_PK', 'LOAD_TIMESTAMP'],
-    schema='raw_vault'
-) }}
+{{ config(materialized='incremental', unique_key='ORDER_PK') }}
 
-{%- set source_model = "stg_customers" -%}
-{%- set src_pk = "CUSTOMER_PK" -%}
-{%- set src_hashdiff = "CUSTOMER_HASHDIFF" -%}
-{%- set src_payload = ['FIRST_NAME', 'LAST_NAME', 'EMAIL'] -%}
-{%- set src_eff = "EFFECTIVE_FROM" -%}
-{%- set src_ldts = "LOAD_TIMESTAMP" -%}
-{%- set src_source = "RECORD_SOURCE" -%}
+WITH source AS (
+    SELECT
+        MD5(CAST(O_ORDERKEY AS VARCHAR)) AS ORDER_PK,
+        O_TOTALPRICE,
+        O_ORDERSTATUS,
+        O_ORDERDATE AS LOAD_DATE,
+        'SNOWFLAKE_SAMPLE' AS RECORD_SOURCE,
+        MD5(CAST(O_TOTALPRICE AS VARCHAR) || O_ORDERSTATUS) AS HASHDIFF
+    FROM {{ source('tpch', 'orders') }}
+    WHERE O_ORDERDATE <= DATE('1992-01-31')
+)
 
-{{ dbtvault.sat(
-    source_model=source_model,
-    src_pk=src_pk,
-    src_hashdiff=src_hashdiff,
-    src_payload=src_payload,
-    src_eff=src_eff,
-    src_ldts=src_ldts,
-    src_source=src_source
-) }}
-
+SELECT * FROM source
+    {% if is_incremental() %}
+WHERE HASHDIFF NOT IN (SELECT HASHDIFF FROM {{ this }})
+    {% endif %}

@@ -13,7 +13,7 @@ profile_config = ProfileConfig(
     profile_mapping=SnowflakeUserPasswordProfileMapping(
         conn_id="snowflake_default",
         profile_args={
-            "database": "ANALYTICS",
+            "database": "TEST_DB",
             "schema": "RAW_VAULT"
         },
     )
