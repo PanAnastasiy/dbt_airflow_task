@@ -1,18 +1,22 @@
-
 from datetime import datetime
 from cosmos import DbtDag, ProjectConfig, ProfileConfig, ExecutionConfig
 from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
 from consts import DBT_ROOT_PATH
+from utils.snowflake_config import SnowflakeEnvConfig
+
+sf_config = SnowflakeEnvConfig()
 
 profile_config = ProfileConfig(
     profile_name="dbt_airflow_project",
-    target_name="dev",
+    target_name=sf_config.target,  # берём из .env
     profile_mapping=SnowflakeUserPasswordProfileMapping(
         conn_id="snowflake_default",
         profile_args={
-            "database": "TEST_DB",
-            "schema": "RAW_VAULT"
+            "database": sf_config.database,
+            "schema": sf_config.schema,
+            "warehouse": sf_config.warehouse,
+            "role": sf_config.role,
         },
     )
 )

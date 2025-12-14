@@ -3,9 +3,7 @@ from dotenv import load_dotenv
 
 
 class SnowflakeEnvConfig:
-    """
-    Loads Snowflake config from .env and validates required variables
-    """
+
     REQUIRED_VARS = [
         "SNOWFLAKE_ACCOUNT",
         "SNOWFLAKE_USER",
