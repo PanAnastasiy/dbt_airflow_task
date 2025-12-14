@@ -1,11 +1,9 @@
-import os
-from pathlib import Path
+
 from datetime import datetime
 from cosmos import DbtDag, ProjectConfig, ProfileConfig, ExecutionConfig
 from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
-
-DBT_ROOT_PATH = Path("/opt/airflow/dbt_customer_project")
+from consts import DBT_ROOT_PATH
 
 profile_config = ProfileConfig(
     profile_name="dbt_airflow_project",
