@@ -1,0 +1,42 @@
+name: 'dbt_customer_project'
+version: '1.0.0'
+config-version: 2
+
+profile: 'dbt_customer_project'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_customer_project:
+    staging:
+      +materialized: view
+      +tags: ["staging"]
+
+    raw_vault:
+      +materialized: incremental
+      hubs:
+        +tags: ["hubs", "raw_vault"]
+      links:
+        +tags: ["links", "raw_vault"]
+      sats:
+        +tags: ["sats", "raw_vault"]
+
+    business_vault:
+      +materialized: view
+      +tags: ["business_vault"]
+      pit:
+        +materialized: table
+        +tags: ["pit"]
+
+    marts:
+      +materialized: table
+      +tags: ["marts"]

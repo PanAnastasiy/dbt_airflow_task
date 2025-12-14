@@ -1,4 +1,4 @@
 .idea
 .env
 .venv
-dbt_customer_project/dbt_packages/
+core/dbt_customer_project/dbt_packages/

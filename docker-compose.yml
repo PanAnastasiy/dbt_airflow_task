@@ -6,19 +6,16 @@ services:
     command: standalone
     ports:
       - "8080:8080"
-
     env_file:
       - .env
-
     environment:
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: admin
-      _AIRFLOW_WWW_USER_PASSWORD: admin
+      PYTHONPATH: /opt/airflow:/opt/airflow/dags:/opt/airflow/project
+      AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 120
       AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
       DBT_PROFILES_DIR: /opt/airflow/dbt_customer_project
-
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./dbt_customer_project:/opt/airflow/dbt_customer_project
-      - ./libs:/opt/airflow/libs
-      - ./logs:/opt/airflow/logs
+      - ./core/airflow/dags:/opt/airflow/dags
+      - ./core/dbt_customer_project:/opt/airflow/dbt_customer_project
+      - ./:/opt/airflow/project
+      - ./core/airflow/libs:/opt/airflow/libs
+      - ./core/airflow//logs:/opt/airflow/logs
