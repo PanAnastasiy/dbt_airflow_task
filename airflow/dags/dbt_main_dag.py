@@ -5,7 +5,7 @@ from cosmos import DbtDag, ProjectConfig, ProfileConfig, ExecutionConfig
 from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
 
-DBT_ROOT_PATH = Path("/opt/airflow/dbt_project")
+DBT_ROOT_PATH = Path("/opt/airflow/dbt_customer_project")
 
 profile_config = ProfileConfig(
     profile_name="dbt_airflow_project",
