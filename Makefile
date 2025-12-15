@@ -47,20 +47,21 @@ install:
 
 dbt-check:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt debug --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	dbt debug --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
 
 dbt-seed:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
 
 dbt-run:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt run --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	dbt run --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
 
 dbt-test:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
 
 dbt-docs:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt docs generate --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	dbt docs generate --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
+
