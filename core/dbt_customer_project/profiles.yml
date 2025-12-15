@@ -1,4 +1,4 @@
-dbt_airflow_project:
+dbt_customer_project:
   target: dev
   outputs:
     dev:
