@@ -13,5 +13,6 @@ RUN uv pip install \
     dbt-core \
     dbt-snowflake \
     astronomer-cosmos==1.7.0 \
-    apache-airflow-providers-snowflake
+    apache-airflow-providers-snowflake \
+    loguru
 

@@ -1,51 +1,29 @@
-
 CONTAINER_NAME = airflow
 DBT_PROJECT_DIR = /opt/airflow/dbt_customer_project
-LOCAL_DBT_DIR = ./core/dbt_customer_project
-
-.PHONY: help up down restart shell logs dbt-check dbt-seed dbt-run dbt-test dbt-docs clean lint fix setup
+LOCAL_DBT_DIR = core/dbt_customer_project
 
 .DEFAULT_GOAL := help
 
-.PHONY: install pipeline
-
-# -----------------------------------------------------------
-# 🚀 MAGIC COMMAND: Нажми и всё заработает
-# -----------------------------------------------------------
-install: setup up
-	@echo "⏳ Ждем 15 секунд, пока Airflow и база инициализируются..."
-	@sleep 15
-	@echo "🔌 Проверяем соединение..."
-	$(MAKE) dbt-check
-	@echo "🌱 Заливаем Seed данные..."
-	$(MAKE) dbt-seed
-	@echo "🏃‍♂️ Запускаем трансформации (Run)..."
-	$(MAKE) dbt-run
-	@echo "🧪 Запускаем тесты..."
-	$(MAKE) dbt-test
-	@echo "📚 Генерируем документацию..."
-	$(MAKE) dbt-docs
-	@echo "✅ ГОТОВО! Проект полностью развернут."
-	@echo "🔗 Airflow UI: http://localhost:8080"
+.PHONY: help up down restart logs shell install \
+        dbt-check dbt-seed dbt-run dbt-test dbt-docs
 
 help:
-	@echo "Управление проектом dbt + Airflow Data Vault"
-	@echo "------------------------------------------------"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@echo "dbt + Airflow Data Vault Project"
+	@echo "--------------------------------"
+	@echo "make up           Start Airflow environment"
+	@echo "make down         Stop containers"
+	@echo "make restart      Restart environment"
+	@echo "make install      Full dbt pipeline"
+	@echo "make logs         Show Airflow logs"
+	@echo "make shell        Open Airflow container shell"
+	@echo "make dbt-run      Run dbt models"
+	@echo ""
+	@echo "NOTE:"
+	@echo "Make sure .env file exists before running 'make up'"
 
-setup:
-	@if [ ! -f .env ]; then \
-		echo "Копирую .env.example в .env..."; \
-		cp .env.example .env; \
-		echo "Файл .env создан! Заполни его своими данными."; \
-	else \
-		echo "ℹФайл .env уже существует."; \
-	fi
-
-up: setup
+up:
 	docker-compose up -d --build
-	@echo "⏳ Подожди немного, пока Airflow инициализируется..."
-	@echo "🔗 UI доступен по адресу: http://localhost:8080"
+	@echo "Airflow UI → http://localhost:8080"
 
 down:
 	docker-compose down
@@ -53,35 +31,36 @@ down:
 restart: down up
 
 logs:
-	docker-compose logs -f airflow
+	docker-compose logs -f $(CONTAINER_NAME)
 
 shell:
 	docker-compose exec $(CONTAINER_NAME) /bin/bash
 
+install:
+	$(MAKE) up
+	$(MAKE) dbt-check
+	$(MAKE) dbt-seed
+	$(MAKE) dbt-run
+	$(MAKE) dbt-test
+	$(MAKE) dbt-docs
+	@echo "Pipeline finished successfully"
+
 dbt-check:
-	docker-compose exec $(CONTAINER_NAME) dbt debug --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	docker-compose exec $(CONTAINER_NAME) \
+	dbt debug --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
 
 dbt-seed:
-	docker-compose exec $(CONTAINER_NAME) dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	docker-compose exec $(CONTAINER_NAME) \
+	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
 
 dbt-run:
-	docker-compose exec $(CONTAINER_NAME) dbt run --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	docker-compose exec $(CONTAINER_NAME) \
+	dbt run --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
 
 dbt-test:
-	docker-compose exec $(CONTAINER_NAME) dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
+	docker-compose exec $(CONTAINER_NAME) \
+	dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
 
 dbt-docs:
-	docker-compose exec $(CONTAINER_NAME) dbt docs generate --project-dir $(DBT_PROJECT_DIR) --profiles-dir .
-	@echo "Документация сгенерирована в папке target/"
-
-lint:
-	uv run sqlfluff lint $(LOCAL_DBT_DIR) --ignore E501 --dialect snowflake
-
-fix:
-	uv run sqlfluff fix $(LOCAL_DBT_DIR) --ignore E501 --dialect snowflake
-
-clean:
-	rm -rf $(LOCAL_DBT_DIR)/target
-	rm -rf $(LOCAL_DBT_DIR)/dbt_packages
-	rm -rf logs/*
-	@echo "Мусор убран."
+	docker-compose exec $(CONTAINER_NAME) \
+	dbt docs generate --project-dir $(DBT_PROJECT_DIR) --profiles-dir .

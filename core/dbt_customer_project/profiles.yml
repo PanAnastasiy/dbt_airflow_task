@@ -11,3 +11,6 @@ dbt_airflow_project:
       database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
       schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
       threads: 3
+  config:
+    send_anonymous_usage_stats: false
+    log_format: text
