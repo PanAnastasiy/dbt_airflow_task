@@ -40,4 +40,4 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
         run: |
-          uv run dbt debug --project-dir dbt_project
+          uv run dbt debug --project-dir core/dbt_customer_project
