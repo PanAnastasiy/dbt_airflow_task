@@ -2,9 +2,15 @@
 
 SELECT
     LNK_CUST_ORDER_HK,
-    LOAD_DATE as START_DATE,
-    NULL as END_DATE,
-    CASE WHEN O_ORDERSTATUS = 'O' THEN TRUE ELSE FALSE END as IS_ACTIVE,
-    RECORD_SOURCE,
-    LOAD_DATE
-FROM {{ ref('stg_tpch_orders') }}
+    LOAD_DATE AS START_DATE,
+    NULL AS END_DATE,
+    RECORD_SOURCE
+FROM {{ ref('stg_tpch_orders') }} s
+{% if is_incremental() %}
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM {{ this }} t
+    WHERE t.LNK_CUST_ORDER_HK = s.LNK_CUST_ORDER_HK
+  AND t.START_DATE = s.LOAD_DATE
+    )
+    {% endif %}
