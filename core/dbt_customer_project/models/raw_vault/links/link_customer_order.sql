@@ -1,12 +1,16 @@
 {{ config(materialized='incremental') }}
 
-SELECT DISTINCT
-    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_HK', 'ORDER_HK']) }} as LINK_HK,
+SELECT
+    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_HK', 'ORDER_HK']) }} AS LINK_HK,
     CUSTOMER_HK,
     ORDER_HK,
     LOAD_DATE,
     RECORD_SOURCE
-FROM {{ ref('stg_tpch_orders') }}
+FROM {{ ref('stg_tpch_orders') }} s
     {% if is_incremental() %}
-WHERE LOAD_DATE > (SELECT MAX(LOAD_DATE) FROM {{ this }})
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM {{ this }} t
+    WHERE t.LINK_HK = {{ dbt_utils.generate_surrogate_key(['s.CUSTOMER_HK', 's.ORDER_HK']) }}
+    )
     {% endif %}

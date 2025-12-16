@@ -21,4 +21,3 @@ services:
       - ./core/dbt_customer_project:/opt/airflow/dbt_customer_project
       - ./:/opt/airflow/project
       - ./core/airflow/logs:/opt/airflow/logs
-      - ./core/dbt_customer_project/profiles.yml:/opt/airflow/dbt_customer_project/profiles.yml
