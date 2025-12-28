@@ -1,12 +1,11 @@
-
 from airflow import DAG
-from airflow.operators.python import BranchPythonOperator
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import BranchPythonOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.trigger_rule import TriggerRule
 
 from utils.airflow_helper import decide_load_type
-from utils.alerts import TelegramAlert
+from utils.telegram_alerts import TelegramAlert
 from utils.consts import DBT_PROFILES_DIR, DBT_PROJECT_DIR
 
 tg_notifier = TelegramAlert()

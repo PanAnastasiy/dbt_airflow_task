@@ -2,7 +2,7 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.dates import days_ago
 
-from utils.alerts import TelegramAlert
+from utils.telegram_alerts import TelegramAlert
 from utils.consts import DBT_PROFILES_DIR, DBT_PROJECT_DIR
 
 tg_notifier = TelegramAlert()

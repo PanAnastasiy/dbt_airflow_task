@@ -1,8 +1,11 @@
 import snowflake.connector
+
 from loguru import logger
+
 from .snowflake_config import SnowflakeEnvConfig
 
 sf_config = SnowflakeEnvConfig()
+
 
 def decide_load_type(**context) -> str:
     logger.info(
@@ -48,9 +51,9 @@ def decide_load_type(**context) -> str:
         if table_count > 0:
             logger.info("Incremental load selected")
             return "incremental_run"
-        else:
-            logger.info("Initial full-refresh load selected")
-            return "initial_load_run"
+
+        logger.info("Initial full-refresh load selected")
+        return "initial_load_run"
 
     except Exception as exc:
         logger.exception("Failed to inspect Snowflake schema", error=str(exc))
