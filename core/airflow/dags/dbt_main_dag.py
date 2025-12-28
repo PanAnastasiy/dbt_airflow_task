@@ -3,14 +3,14 @@ from datetime import datetime
 from cosmos import DbtDag, ExecutionConfig, ProfileConfig, ProjectConfig
 from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
-from consts import DBT_ROOT_PATH
+from utils.consts import DBT_ROOT_PATH
 from utils.snowflake_config import SnowflakeEnvConfig
 
 sf_config = SnowflakeEnvConfig()
 
 profile_config = ProfileConfig(
     profile_name="dbt_airflow_project",
-    target_name=sf_config.target,  # берём из .env
+    target_name=sf_config.target,
     profile_mapping=SnowflakeUserPasswordProfileMapping(
         conn_id="snowflake_default",
         profile_args={

@@ -7,4 +7,3 @@ sources:
     tables:
       - name: orders
       - name: customer
-      - name: nation

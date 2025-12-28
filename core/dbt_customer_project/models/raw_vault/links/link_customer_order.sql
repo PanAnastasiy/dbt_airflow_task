@@ -1,16 +1,16 @@
 {{ config(materialized='incremental') }}
 
-SELECT
-    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_HK', 'ORDER_HK']) }} AS LINK_HK,
-    CUSTOMER_HK,
-    ORDER_HK,
-    LOAD_DATE,
-    RECORD_SOURCE
-FROM {{ ref('stg_tpch_orders') }} s
+with source as (
+    select distinct
+        link_customer_order_hk,
+        order_hk,
+        customer_hk,
+        load_date,
+        record_source
+    from {{ ref('stg_orders') }}
+)
+
+select * from source
     {% if is_incremental() %}
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM {{ this }} t
-    WHERE t.LINK_HK = {{ dbt_utils.generate_surrogate_key(['s.CUSTOMER_HK', 's.ORDER_HK']) }}
-    )
+where link_customer_order_hk not in (select link_customer_order_hk from {{ this }})
     {% endif %}

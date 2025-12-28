@@ -1,23 +1,28 @@
-
 services:
   airflow:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: airflow
-    command: standalone
     ports:
       - "8080:8080"
     env_file:
       - .env
     environment:
-      PYTHONPATH: /opt/airflow:/opt/airflow/dags:/opt/airflow/project
-      _AIRFLOW_WWW_USER_CREATE: 'true' # REDO
-      _AIRFLOW_WWW_USER_USERNAME: admin # REDO
-      _AIRFLOW_WWW_USER_PASSWORD: admin # REDO
-      AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 120
+      PYTHONPATH: /opt/airflow:/opt/airflow/dags
+
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+
+      AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 300
       AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+
+      DBT_PROJECT_DIR: /opt/airflow/dbt_customer_project
       DBT_PROFILES_DIR: /opt/airflow/dbt_customer_project
-    volumes:
-      - ./core/airflow/dags:/opt/airflow/dags
-      - ./core/dbt_customer_project:/opt/airflow/dbt_customer_project
-      - ./:/opt/airflow/project
-      - ./core/airflow/logs:/opt/airflow/logs
+
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

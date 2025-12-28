@@ -1,0 +1,53 @@
+[sqlfluff]
+dialect = snowflake
+templater = dbt
+
+runaway_limit = 10
+max_line_length = 120
+
+exclude_rules = L031, L014
+
+exclude_paths =
+    target/,
+    dbt_packages/,
+    logs/,
+    .venv/,
+    venv/
+
+[sqlfluff:templater:dbt]
+project_dir = core/dbt_customer_project
+profiles_dir = core/dbt_customer_project
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indent_unit = space
+
+[sqlfluff:layout:type:comma]
+spacing_before = touch
+line_position = leading
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.types]
+capitalisation_policy = upper
+
+[sqlfluff:rules:naming.column]
+capitalisation_policy = lower
+
+[sqlfluff:rules:naming.table]
+capitalisation_policy = lower
+
+[sqlfluff:rules:naming.alias]
+aliasing = explicit
+capitalisation_policy = lower
+
+[sqlfluff:rules:layout.join]
+allow_implicit = False
+

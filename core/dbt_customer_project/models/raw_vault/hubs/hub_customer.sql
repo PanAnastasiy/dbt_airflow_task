@@ -1,15 +1,15 @@
 {{ config(materialized='incremental') }}
 
-SELECT
-    CUSTOMER_HK,
-    CUSTOMER_ID,
-    LOAD_DATE,
-    RECORD_SOURCE
-FROM {{ ref('stg_tpch_customer') }} s
-{% if is_incremental() %}
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM {{ this }} t
-    WHERE t.CUSTOMER_HK = s.CUSTOMER_HK
-    )
+with source as (
+    select distinct
+        customer_hk,
+        customer_id,
+        load_date,
+        record_source
+    from {{ ref('stg_customers') }}
+)
+
+select * from source
+    {% if is_incremental() %}
+where customer_hk not in (select customer_hk from {{ this }})
     {% endif %}
