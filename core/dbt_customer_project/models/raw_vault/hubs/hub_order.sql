@@ -1,15 +1,12 @@
 {{ config(materialized='incremental') }}
 
-SELECT
+SELECT DISTINCT
     ORDER_HK,
-    ORDER_ID,
-    LOAD_DATE,
+    order_id,
+    LOAD_DTS,
     RECORD_SOURCE
-FROM {{ ref('stg_tpch_orders') }} s
-{% if is_incremental() %}
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM {{ this }} t
-    WHERE t.ORDER_HK = s.ORDER_HK
-    )
-    {% endif %}
+FROM {{ ref('stg_orders') }}
+WHERE ORDER_HK IS NOT NULL
+    {% if is_incremental() %}
+  AND LOAD_DTS > (SELECT MAX(LOAD_DTS) FROM {{ this }})
+{% endif %}
