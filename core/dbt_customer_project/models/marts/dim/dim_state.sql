@@ -1,6 +1,8 @@
-{{ dbt_utils.date_spine(
-    datepart="day",
-    start_date="cast('1992-01-01' as date)",
-    end_date="cast('2025-01-01' as date)"
-   )
-}}
+{{ config(materialized='table') }}
+
+SELECT DISTINCT
+    {{ dbt_utils.generate_surrogate_key(['c_nationkey']) }} as state_pk,
+    c_nationkey as state_id,
+    -- Предположим, логика маппинга или просто уникальный список
+    'Nation #' || c_nationkey as state_name
+FROM {{ ref('stg_customers') }}

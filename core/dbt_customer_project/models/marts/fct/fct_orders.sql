@@ -1,21 +1,24 @@
 {{ config(materialized='table') }}
 
-with orders as (
-    select * from {{ ref('stg_orders') }}
-),
+SELECT
+    link.LINK_CUST_ORDER_HK,
+    link.ORDER_HK,
+    link.CUSTOMER_HK,
 
-dim_cust as (
-    select customer_id, vip_status from {{ ref('dim_customer') }}
-)
+    -- Исправлено имя колонки (date_day вместо date_id)
+    d.date_day as date_key,
 
-select
-    o.order_id,
-    o.customer_id,
-    o.order_date,
-    o.total_price,
-    o.order_status,
-    o.priority,
-    -- Подтягиваем данные из измерения для удобства аналитиков
-    c.vip_status as customer_vip_status
-from orders o
-         left join dim_cust c on o.customer_id = c.customer_id
+    -- Пример мер (нужно взять из стейджа или сателлита)
+    stg.total_amount,
+
+    link.LOAD_DTS as ingestion_date
+
+FROM {{ ref('link_customer_order') }} link
+
+-- Джойним дату (конвертируем timestamp в date для джойна)
+LEFT JOIN {{ ref('dim_date') }} d
+ON CAST(link.LOAD_DTS AS DATE) = d.date_day
+
+-- Джойним детали заказа для суммы (из стейджа или сателлита)
+    LEFT JOIN {{ ref('stg_orders') }} stg
+    ON link.ORDER_HK = stg.ORDER_HK

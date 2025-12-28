@@ -1,6 +1,5 @@
-CONTAINER_NAME = airflow
+CONTAINER_NAME = airflow-scheduler
 DBT_PROJECT_DIR = /opt/airflow/dbt_customer_project
-LOCAL_DBT_DIR = core/dbt_customer_project
 
 .DEFAULT_GOAL := help
 
@@ -51,7 +50,7 @@ dbt-check:
 
 dbt-seed:
 	docker-compose exec $(CONTAINER_NAME) \
-	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR)
+	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROJECT_DIR) --threads 1
 
 dbt-run:
 	docker-compose exec $(CONTAINER_NAME) \

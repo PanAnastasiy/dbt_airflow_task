@@ -1,16 +1,13 @@
 {{ config(materialized='incremental') }}
 
-with source as (
-    select distinct
-        link_customer_order_hk,
-        order_hk,
-        customer_hk,
-        load_date,
-        record_source
-    from {{ ref('stg_orders') }}
-)
-
-select * from source
+SELECT DISTINCT
+    LINK_CUST_ORDER_HK,
+    CUSTOMER_HK,
+    ORDER_HK,
+    LOAD_DTS,
+    RECORD_SOURCE
+FROM {{ ref('stg_orders') }}
+WHERE LINK_CUST_ORDER_HK IS NOT NULL
     {% if is_incremental() %}
-where link_customer_order_hk not in (select link_customer_order_hk from {{ this }})
-    {% endif %}
+  AND LOAD_DTS > (SELECT MAX(LOAD_DTS) FROM {{ this }})
+{% endif %}

@@ -1,29 +1,41 @@
 {{ config(materialized='view') }}
 
-with source as (
-    select * from {{ source('snowflake_sample', 'customer') }}
-),
-
-hashed as (
-    select
-        -- Генерируем Hash Key для Хаба (Бизнес ключ - C_CUSTKEY)
-        {{ dbt_utils.generate_surrogate_key(['c_custkey']) }} as customer_hk,
-
-        -- Бизнес ключ
+WITH source AS (
+    SELECT
         c_custkey as customer_id,
-
-        -- Атрибуты (Payload)
-        c_name as customer_name,
-        c_address as address,
-        c_nationkey as nation_key,
-        c_phone as phone,
-        c_acctbal as account_balance,
-        c_mktsegment as market_segment,
-
-        -- Метаданные
-        current_timestamp() as load_date,
-        'SNOWFLAKE_SAMPLE' as record_source
-    from source
+        c_name,
+        c_phone,
+        c_address,
+        c_acctbal,   -- <--- ДОБАВИЛИ БАЛАНС
+        c_mktsegment, -- <--- ДОБАВИЛИ СЕГМЕНТ (нужен для BV логики)
+        c_nationkey,
+        '2024-01-01'::TIMESTAMP as load_date
+    FROM {{ source('tpch', 'customer') }}
 )
 
-select * from hashed
+SELECT
+    customer_id,
+    c_nationkey,
+
+    -- Hash Keys
+    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} AS CUSTOMER_HK,
+
+    -- Hash Diff (Details)
+    {{ dbt_utils.generate_surrogate_key(['c_name', 'c_phone', 'c_address']) }} AS CUSTOMER_HASHDIFF,
+
+    -- Hash Diff (Finance) - Добавили хеш для финансов
+    {{ dbt_utils.generate_surrogate_key(['c_acctbal']) }} AS HASHDIFF_FINANCE,
+
+    -- Meta
+    load_date AS LOAD_DTS,
+    load_date AS EFFECTIVE_FROM,
+    'TPCH' AS RECORD_SOURCE,
+
+    -- Payload (Renamed to clean names)
+    c_name as first_name,      -- <--- ПЕРЕИМЕНОВАЛИ
+    c_phone as phone,          -- <--- ПЕРЕИМЕНОВАЛИ
+    c_address as address,      -- <--- ПЕРЕИМЕНОВАЛИ
+    c_acctbal as account_balance, -- <--- НОВАЯ КОЛОНКА
+    c_mktsegment as segment       -- <--- НОВАЯ КОЛОНКА
+
+FROM source

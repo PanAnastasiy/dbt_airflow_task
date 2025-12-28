@@ -1,34 +1,39 @@
 {{ config(materialized='view') }}
 
-with source as (
-    select * from {{ source('snowflake_sample', 'orders') }}
-),
-
-hashed as (
-    select
-        -- Hash Key для Хаба Заказов
-        {{ dbt_utils.generate_surrogate_key(['o_orderkey']) }} as order_hk,
-
-        -- Foreign Hash Key для Линка (связь с Customer)
-        {{ dbt_utils.generate_surrogate_key(['o_custkey']) }} as customer_hk,
-
-        -- Hash Key для самого Линка
-        {{ dbt_utils.generate_surrogate_key(['o_orderkey', 'o_custkey']) }} as link_customer_order_hk,
-
-        -- Бизнес ключи
+WITH source AS (
+    SELECT
         o_orderkey as order_id,
         o_custkey as customer_id,
-
-        -- Атрибуты
         o_orderstatus as order_status,
-        o_totalprice as total_price,
+        o_totalprice as total_amount,
         o_orderdate as order_date,
-        o_orderpriority as priority,
-
-        -- Метаданные
-        current_timestamp() as load_date,
-        'SNOWFLAKE_SAMPLE' as record_source
-    from source
+        'TPCH' as record_source
+    FROM {{ source('tpch', 'orders') }}
 )
 
-select * from hashed
+SELECT
+    order_id,
+    customer_id,
+
+    -- Hash Keys
+    {{ dbt_utils.generate_surrogate_key(['order_id']) }} AS ORDER_HK,
+    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} AS CUSTOMER_HK,
+
+    -- Link Hash Key (Зависит от ключей Хабов)
+    {{ dbt_utils.generate_surrogate_key(['order_id', 'customer_id']) }} AS LINK_CUST_ORDER_HK,
+
+    -- Hash Diff (Атрибуты заказа)
+    {{ dbt_utils.generate_surrogate_key([
+    'order_status',
+    'total_amount'
+    ]) }} AS ORDER_HASHDIFF,
+
+    -- Meta
+    order_date AS LOAD_DTS,
+    order_date AS EFFECTIVE_FROM,
+    record_source AS RECORD_SOURCE,
+
+    order_status,
+    total_amount
+
+FROM source

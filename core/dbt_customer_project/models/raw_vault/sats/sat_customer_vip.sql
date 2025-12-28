@@ -1,28 +1,23 @@
-{{ config(materialized='incremental') }}
+{{ config(
+    materialized='incremental'
+) }}
 
-WITH source AS (
+WITH source_data AS (
     SELECT
         CUSTOMER_HK,
-        vip_category,
-        assigned_manager,
-        LOAD_DATE,
-        RECORD_SOURCE,
-        {{ dbt_utils.generate_surrogate_key(['vip_category', 'assigned_manager']) }} AS HASH_DIFF
-    FROM {{ ref('stg_seed_vip') }}
+        VIP_HASHDIFF,
+        vip_status,
+        LOAD_DTS,
+        EFFECTIVE_FROM,
+        RECORD_SOURCE
+    FROM {{ ref('stg_vip_customers') }}
 )
-SELECT
-    CUSTOMER_HK,
-    vip_category,
-    assigned_manager,
-    LOAD_DATE,
-    RECORD_SOURCE,
-    HASH_DIFF
-FROM source s
+
+SELECT * FROM source_data src
     {% if is_incremental() %}
 WHERE NOT EXISTS (
-    SELECT 1
-    FROM {{ this }} t
-    WHERE t.CUSTOMER_HK = s.CUSTOMER_HK
-  AND t.HASH_DIFF = s.HASH_DIFF
+    SELECT 1 FROM {{ this }} tgt
+    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
+  AND tgt.VIP_HASHDIFF = src.VIP_HASHDIFF
     )
     {% endif %}

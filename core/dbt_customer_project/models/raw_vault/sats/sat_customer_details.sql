@@ -1,23 +1,26 @@
-{{ config(materialized='incremental') }}
+{{ config(
+    materialized='incremental'
+) }}
 
-with source as (
-    select
-        customer_hk,
-        customer_name,
-        address,
+WITH source_data AS (
+    SELECT
+        CUSTOMER_HK,
+        CUSTOMER_HASHDIFF,
+        first_name,  -- <--- ВАЖНО: Тут должно быть first_name, а не c_name
         phone,
-        market_segment,
-        load_date,
-        record_source,
-        -- Генерируем Hash Diff для проверки изменений (CDC)
-        {{ dbt_utils.generate_surrogate_key(['customer_name', 'address', 'phone', 'market_segment']) }} as hash_diff
-    from {{ ref('stg_customers') }}
+        address,
+        segment,
+        LOAD_DTS,
+        EFFECTIVE_FROM,
+        RECORD_SOURCE
+    FROM {{ ref('stg_customers') }}
 )
 
-select * from source
+SELECT * FROM source_data src
     {% if is_incremental() %}
--- Грузим только если такой записи (с таким hash_diff) еще нет для этого ключа
-where hash_diff not in (
-    select hash_diff from {{ this }} where customer_hk = source.customer_hk
+WHERE NOT EXISTS (
+    SELECT 1 FROM {{ this }} tgt
+    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
+  AND tgt.CUSTOMER_HASHDIFF = src.CUSTOMER_HASHDIFF
     )
     {% endif %}

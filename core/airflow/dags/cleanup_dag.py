@@ -13,19 +13,21 @@ default_args = {
     'on_failure_callback': tg_notifier.send,
 }
 
-with DAG('cleanup_snowflake_schema', default_args=default_args, schedule_interval=None, catchup=False) as dag:
+with DAG(
+    'cleanup_snowflake_schema', default_args=default_args, schedule_interval=None, catchup=False
+) as dag:
 
     clean_local = BashOperator(
         task_id='dbt_clean_local',
         bash_command=f'dbt clean --profiles-dir {DBT_PROFILES_DIR}',
-        cwd=DBT_PROJECT_DIR
+        cwd=DBT_PROJECT_DIR,
     )
 
     drop_schema_snowflake = BashOperator(
         task_id='drop_snowflake_schema',
         bash_command=f'dbt run-operation drop_my_schema --profiles-dir {DBT_PROFILES_DIR}',
         cwd=DBT_PROJECT_DIR,
-        on_success_callback=tg_notifier.send
+        on_success_callback=tg_notifier.send,
     )
 
     clean_local >> drop_schema_snowflake

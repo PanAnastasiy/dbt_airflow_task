@@ -3,24 +3,21 @@
 WITH source AS (
     SELECT
         CUSTOMER_HK,
-        C_ACCTBAL,
-        LOAD_DATE,
-        RECORD_SOURCE,
-        {{ dbt_utils.generate_surrogate_key(['C_ACCTBAL']) }} AS HASH_DIFF
-    FROM {{ ref('stg_tpch_customer') }}
+        HASHDIFF_FINANCE, -- Этот хеш мы теперь генерим в стейдже
+        account_balance,  -- <--- ТЕПЕРЬ ОНА ЕСТЬ
+        '10000' as credit_limit, -- Заглушка (нет в TPCH)
+        LOAD_DTS,
+        EFFECTIVE_FROM,
+        RECORD_SOURCE
+    FROM {{ ref('stg_customers') }}
 )
-SELECT
-    CUSTOMER_HK,
-    C_ACCTBAL,
-    LOAD_DATE,
-    RECORD_SOURCE,
-    HASH_DIFF
-FROM source s
+
+SELECT * FROM source src
     {% if is_incremental() %}
 WHERE NOT EXISTS (
     SELECT 1
-    FROM {{ this }} t
-    WHERE t.CUSTOMER_HK = s.CUSTOMER_HK
-  AND t.HASH_DIFF = s.HASH_DIFF
+    FROM {{ this }} tgt
+    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
+  AND tgt.HASHDIFF_FINANCE = src.HASHDIFF_FINANCE
     )
     {% endif %}

@@ -1,20 +1,37 @@
 {{ config(materialized='table') }}
 
-with hub as (
-    select customer_hk, customer_id
-    from {{ ref('hub_customer') }}
-),
+SELECT
+    pit.CUSTOMER_HK,
+    pit.AS_OF_DATE as valid_from,
+    LEAD(pit.AS_OF_DATE, 1, '9999-12-31') OVER (PARTITION BY pit.CUSTOMER_HK ORDER BY pit.AS_OF_DATE) as valid_to,
 
-bv_sat as (
-    select * from {{ ref('sat_bv_customer_combined') }}
-)
-
-select
     h.customer_id,
-    s.customer_name,
-    s.market_segment,
-    s.vip_status,
-    s.joined_vip_date,
-    s.load_date as last_updated
-from hub h
-         inner join bv_sat s on h.customer_hk = s.customer_hk
+
+    -- Данные из Sat Details (новые имена)
+    sd.first_name,
+    sd.phone,
+    sd.address,
+    sd.segment,
+
+    -- Данные из Sat Finance (новые имена)
+    sf.account_balance,
+
+    COALESCE(sv.vip_status, 'Regular') as vip_status
+
+FROM {{ ref('pit_customer') }} pit
+INNER JOIN {{ ref('hub_customer') }} h
+ON pit.CUSTOMER_HK = h.CUSTOMER_HK
+
+    LEFT JOIN {{ ref('sat_customer_details') }} sd
+    ON pit.CUSTOMER_HK = sd.CUSTOMER_HK
+    AND pit.SAT_DETAILS_LOAD_DTS = sd.LOAD_DTS
+
+    LEFT JOIN {{ ref('sat_customer_finance') }} sf
+    ON pit.CUSTOMER_HK = sf.CUSTOMER_HK
+    AND pit.SAT_FINANCE_LOAD_DTS = sf.LOAD_DTS
+
+    LEFT JOIN {{ ref('sat_customer_vip') }} sv
+    ON pit.CUSTOMER_HK = sv.CUSTOMER_HK
+    AND pit.SAT_VIP_LOAD_DTS = sv.LOAD_DTS
+
+WHERE pit.AS_OF_DATE <= CURRENT_DATE

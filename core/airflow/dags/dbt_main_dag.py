@@ -1,38 +1,50 @@
-from datetime import datetime
 
-from cosmos import DbtDag, ExecutionConfig, ProfileConfig, ProjectConfig
-from cosmos.profiles import SnowflakeUserPasswordProfileMapping
+from airflow import DAG
+from airflow.operators.python import BranchPythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.utils.dates import days_ago
+from airflow.utils.trigger_rule import TriggerRule
 
-from utils.consts import DBT_ROOT_PATH
-from utils.snowflake_config import SnowflakeEnvConfig
+from utils.airflow_helper import decide_load_type
+from utils.alerts import TelegramAlert
+from utils.consts import DBT_PROFILES_DIR, DBT_PROJECT_DIR
 
-sf_config = SnowflakeEnvConfig()
+tg_notifier = TelegramAlert()
 
-profile_config = ProfileConfig(
-    profile_name="dbt_airflow_project",
-    target_name=sf_config.target,
-    profile_mapping=SnowflakeUserPasswordProfileMapping(
-        conn_id="snowflake_default",
-        profile_args={
-            "database": sf_config.database,
-            "schema": sf_config.schema,
-            "warehouse": sf_config.warehouse,
-            "role": sf_config.role,
-        },
+default_args = {
+    'owner': 'airflow',
+    'start_date': days_ago(1),
+    'on_failure_callback': tg_notifier.send,
+}
+
+with DAG(
+        'smart_dbt_pipeline', default_args=default_args, schedule_interval='@daily', catchup=False
+) as dag:
+
+    branch_task = BranchPythonOperator(
+        task_id='check_snowflake_state',
+        python_callable=decide_load_type,
     )
-)
 
-my_dbt_dag = DbtDag(
-    project_config=ProjectConfig(
-        dbt_project_path=DBT_ROOT_PATH,
-    ),
-    profile_config=profile_config,
-    execution_config=ExecutionConfig(
-        dbt_executable_path="dbt",
-    ),
-    dag_id="snowflake_data_vault",
-    start_date=datetime(2025, 1, 1),
-    schedule_interval="@daily",
-    catchup=False,
-    tags=["dbt", "snowflake", "vault"],
-)
+    initial_load = BashOperator(
+        task_id='initial_load_run',
+        bash_command=f'dbt build --full-refresh --profiles-dir {DBT_PROFILES_DIR}',
+        cwd=DBT_PROJECT_DIR,
+    )
+
+    incremental_load = BashOperator(
+        task_id='incremental_run',
+        bash_command=f'dbt build --profiles-dir {DBT_PROFILES_DIR}',
+        cwd=DBT_PROJECT_DIR,
+    )
+
+    final_success = BashOperator(
+        task_id='pipeline_success',
+        bash_command='echo "DBT Load Completed Successfully"',
+        trigger_rule=TriggerRule.ONE_SUCCESS,
+        on_success_callback=tg_notifier.send,
+    )
+
+    branch_task >> [initial_load, incremental_load]
+    initial_load >> final_success
+    incremental_load >> final_success

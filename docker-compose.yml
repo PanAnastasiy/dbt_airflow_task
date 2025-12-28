@@ -1,28 +1,77 @@
+version: '3.8'
+
 services:
-  airflow:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: airflow
-    ports:
-      - "8080:8080"
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+
+  airflow-init:
+    build: .
     env_file:
       - .env
     environment:
-      PYTHONPATH: /opt/airflow:/opt/airflow/dags
-
-      _AIRFLOW_WWW_USER_CREATE: 'true'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      _AIRFLOW_WWW_USER_CREATE: "true"
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: bash -c "airflow db upgrade && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true"
 
-      AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 300
-      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+  airflow-webserver:
+    build: .
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__WEBSERVER__SECRET_KEY: "my_very_secret_key_for_project"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+    volumes:
+      - ./core/airflow/dags:/opt/airflow/dags
+      - ./core/dbt_customer_project:/opt/airflow/dbt_customer_project
+    command: ["airflow", "webserver"]
 
-      DBT_PROJECT_DIR: /opt/airflow/dbt_customer_project
-      DBT_PROFILES_DIR: /opt/airflow/dbt_customer_project
 
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  airflow-scheduler:
+    build: .
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__WEBSERVER__SECRET_KEY: "my_very_secret_key_for_project"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    volumes:
+      - ./core/airflow/dags:/opt/airflow/dags
+      - ./core/dbt_customer_project:/opt/airflow/dbt_customer_project
+    command: ["airflow", "scheduler"]
+
+volumes:
+  postgres_data:
