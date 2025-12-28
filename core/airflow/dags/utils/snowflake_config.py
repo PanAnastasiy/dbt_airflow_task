@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
+
 class SnowflakeEnvConfig:
 
     def __init__(self, env_path: str | None = None):

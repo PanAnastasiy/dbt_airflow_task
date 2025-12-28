@@ -1,25 +1,15 @@
 {{ config(materialized='view') }}
 
-WITH source AS (
+WITH SOURCE AS (
     SELECT * FROM {{ ref('vip_customers') }}
 )
 
 SELECT
-    -- Keys
-    customer_id,
-
-    -- Hash Key (PK)
-    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} AS CUSTOMER_HK,
-
-    -- Hash Diff (Payload)
-    {{ dbt_utils.generate_surrogate_key(['vip_status']) }} AS VIP_HASHDIFF,
-
-    -- Meta
-    joined_vip_date::TIMESTAMP AS LOAD_DTS,
-    joined_vip_date::TIMESTAMP AS EFFECTIVE_FROM,
+    CUSTOMER_ID,
+    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_ID']) }} AS CUSTOMER_HK,
+    {{ dbt_utils.generate_surrogate_key(['VIP_STATUS']) }} AS VIP_HASHDIFF,
+    JOINED_VIP_DATE::TIMESTAMP AS LOAD_DTS,
+    JOINED_VIP_DATE::TIMESTAMP AS EFFECTIVE_FROM,
     'MANUAL_CSV' AS RECORD_SOURCE,
-
-    -- Payload
-    vip_status
-
-FROM source
+    VIP_STATUS
+FROM SOURCE

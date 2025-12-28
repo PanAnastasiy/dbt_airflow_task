@@ -1,9 +1,8 @@
 import sys
 from typing import Any
 
-from loguru import logger
 from airflow.models import TaskInstance
-
+from loguru import logger
 
 
 class AppLogger:
