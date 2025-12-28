@@ -1,6 +1,6 @@
 import snowflake.connector
 from loguru import logger
-from snowflake_config import SnowflakeEnvConfig
+from .snowflake_config import SnowflakeEnvConfig
 
 sf_config = SnowflakeEnvConfig()
 
