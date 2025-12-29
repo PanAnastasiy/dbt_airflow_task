@@ -1,63 +1,51 @@
-{{ config(
-    materialized='table'
-) }}
+{{ config(materialized='table') }}
 
-WITH snapshot_dates AS (
-    SELECT DISTINCT EFFECTIVE_FROM AS AS_OF_DATE FROM {{ ref('sat_customer_details') }}
-    UNION
-    SELECT DISTINCT EFFECTIVE_FROM AS AS_OF_DATE FROM {{ ref('sat_customer_finance') }}
-    UNION
-    SELECT DISTINCT EFFECTIVE_FROM AS AS_OF_DATE FROM {{ ref('sat_customer_vip') }}
-),
-
-all_keys AS (
-    SELECT DISTINCT CUSTOMER_HK FROM {{ ref('hub_customer') }}
-),
-
-pit_logic AS (
+WITH
+bv_combined AS (
     SELECT
-        k.CUSTOMER_HK,
-        d.AS_OF_DATE,
+        CUSTOMER_HK,
+        START_DATE,
+        START_DATE AS LOAD_DTS,
+        COALESCE(
+            LEAD(START_DATE) OVER (PARTITION BY CUSTOMER_HK ORDER BY START_DATE),
+            TO_TIMESTAMP('9999-12-31')
+        ) AS END_DATE
+    FROM {{ ref('sat_bv_customer_combined') }}
+),
 
-        sd.LOAD_DTS AS LOAD_DTS_DETAILS,
-        DENSE_RANK() OVER (
-            PARTITION BY k.CUSTOMER_HK, d.AS_OF_DATE
-            ORDER BY sd.EFFECTIVE_FROM DESC
-        ) as rn_details,
+bv_eff AS (
+    SELECT
+        CUSTOMER_HK,
+        START_DATE,
+        START_DATE AS LOAD_DTS,
+        COALESCE(
+            LEAD(START_DATE) OVER (PARTITION BY CUSTOMER_HK ORDER BY START_DATE),
+            TO_TIMESTAMP('9999-12-31')
+        ) AS END_DATE
+    FROM {{ ref('sat_eff_order_customer') }}
+),
 
-        sf.LOAD_DTS AS LOAD_DTS_FINANCE,
-        DENSE_RANK() OVER (
-            PARTITION BY k.CUSTOMER_HK, d.AS_OF_DATE
-            ORDER BY sf.EFFECTIVE_FROM DESC
-        ) as rn_finance,
-
-        sv.LOAD_DTS AS LOAD_DTS_VIP,
-        DENSE_RANK() OVER (
-            PARTITION BY k.CUSTOMER_HK, d.AS_OF_DATE
-            ORDER BY sv.EFFECTIVE_FROM DESC
-        ) as rn_vip
-
-    FROM snapshot_dates d
-    CROSS JOIN all_keys k
-
-    LEFT JOIN {{ ref('sat_customer_details') }} sd
-        ON k.CUSTOMER_HK = sd.CUSTOMER_HK AND sd.EFFECTIVE_FROM <= d.AS_OF_DATE
-
-    LEFT JOIN {{ ref('sat_customer_finance') }} sf
-        ON k.CUSTOMER_HK = sf.CUSTOMER_HK AND sf.EFFECTIVE_FROM <= d.AS_OF_DATE
-
-    LEFT JOIN {{ ref('sat_customer_vip') }} sv
-        ON k.CUSTOMER_HK = sv.CUSTOMER_HK AND sv.EFFECTIVE_FROM <= d.AS_OF_DATE
+all_dates AS (
+    SELECT CUSTOMER_HK, START_DATE AS AS_OF_DATE FROM bv_combined
+    UNION DISTINCT
+    SELECT CUSTOMER_HK, START_DATE FROM bv_eff
 )
 
 SELECT
-    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_HK', 'AS_OF_DATE']) }} AS PIT_HK,
-    CUSTOMER_HK,
-    AS_OF_DATE,
+    {{ dbt_utils.generate_surrogate_key(['d.CUSTOMER_HK', 'd.AS_OF_DATE']) }} AS PIT_HK,
+    d.CUSTOMER_HK,
+    d.AS_OF_DATE,
 
-    MAX(CASE WHEN rn_details = 1 THEN LOAD_DTS_DETAILS END) AS SAT_DETAILS_LOAD_DTS,
-    MAX(CASE WHEN rn_finance = 1 THEN LOAD_DTS_FINANCE END) AS SAT_FINANCE_LOAD_DTS,
-    MAX(CASE WHEN rn_vip = 1 THEN LOAD_DTS_VIP END)         AS SAT_VIP_LOAD_DTS
+    c.LOAD_DTS AS SAT_BV_COMBINED_LOAD_DTS,
+    e.LOAD_DTS AS SAT_EFF_LOAD_DTS
 
-FROM pit_logic
-GROUP BY 1, 2, 3
+FROM all_dates d
+
+    INNER JOIN bv_combined c
+ON d.CUSTOMER_HK = c.CUSTOMER_HK
+    AND d.AS_OF_DATE >= c.START_DATE
+    AND d.AS_OF_DATE < c.END_DATE
+    LEFT JOIN bv_eff e
+    ON d.CUSTOMER_HK = e.CUSTOMER_HK
+    AND d.AS_OF_DATE >= e.START_DATE
+    AND d.AS_OF_DATE < e.END_DATE

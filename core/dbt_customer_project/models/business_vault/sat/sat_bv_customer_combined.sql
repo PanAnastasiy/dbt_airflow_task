@@ -1,42 +1,53 @@
-{{ config(materialized='view') }}
+{{ config(materialized='incremental') }}
 
-WITH pit AS (
-    SELECT * FROM {{ ref('pit_customer') }}
-    WHERE AS_OF_DATE = CURRENT_DATE
+WITH link AS (
+    SELECT
+          l.LINK_CUST_ORDER_HK
+        , l.CUSTOMER_HK
+        , l.ORDER_HK
+        , l.LOAD_DTS AS link_load_date
+        , l.RECORD_SOURCE AS link_record_source
+    FROM {{ ref('link_customer_order') }} AS l
 ),
 
-raw_sat_main AS (
-    SELECT * FROM {{ ref('sat_customer_details') }}
+stage AS (
+    SELECT DISTINCT
+          LINK.LINK_CUST_ORDER_HK
+        , LINK.CUSTOMER_HK
+        , LINK.ORDER_HK
+        , o.LOAD_DTS AS START_DATE
+        , o.RECORD_SOURCE AS RECORD_SOURCE
+    FROM link AS LINK
+    INNER JOIN {{ ref('stg_orders') }} AS o
+        ON LINK.ORDER_HK = o.ORDER_HK
 ),
 
-raw_sat_vip AS (
-    SELECT * FROM {{ ref('sat_customer_vip') }}
+latest_records AS (
+    SELECT
+          LINK_CUST_ORDER_HK
+        , CUSTOMER_HK
+        , ORDER_HK
+        , START_DATE
+        , RECORD_SOURCE
+        , ROW_NUMBER() OVER (
+              PARTITION BY LINK_CUST_ORDER_HK
+              ORDER BY START_DATE DESC
+          ) AS rn
+    FROM stage
 )
 
 SELECT
-    pit.CUSTOMER_HK,
-    pit.AS_OF_DATE,
-
-    -- Данные из Details
-    s1.first_name,
-    s1.phone,
-
-    -- Данные из VIP (Исправили имя колонки)
-    s2.vip_status, -- БЫЛО vip_level, СТАЛО vip_status
-
-    -- Бизнес-логика
-    CASE
-        WHEN s2.vip_status = 'Platinum' OR s1.segment = 'BUILDING' THEN TRUE
-        ELSE FALSE
-        END as is_priority_customer,
-
-    pit.AS_OF_DATE as COMBINED_LOAD_DTS
-
-FROM pit
-         LEFT JOIN raw_sat_main s1
-                   ON pit.CUSTOMER_HK = s1.CUSTOMER_HK
-                       AND pit.SAT_DETAILS_LOAD_DTS = s1.LOAD_DTS
-
-         LEFT JOIN raw_sat_vip s2
-                   ON pit.CUSTOMER_HK = s2.CUSTOMER_HK
-                       AND pit.SAT_VIP_LOAD_DTS = s2.LOAD_DTS
+    LINK_CUST_ORDER_HK
+     , CUSTOMER_HK
+     , ORDER_HK
+     , START_DATE
+     , NULL::TIMESTAMP AS END_DATE
+    , RECORD_SOURCE
+FROM latest_records
+WHERE rn = 1
+    {% if is_incremental() %}
+  AND START_DATE > (
+      SELECT MAX(START_DATE)
+      FROM {{ this }}
+  )
+{% endif %}

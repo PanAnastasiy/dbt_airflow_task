@@ -9,7 +9,7 @@ WITH SOURCE AS (
         C_ACCTBAL,
         C_MKTSEGMENT,
         C_NATIONKEY,
-        '2024-01-01'::TIMESTAMP AS LOAD_DATE
+        '2025-01-01'::TIMESTAMP AS LOAD_DATE
     FROM {{ source('tpch', 'customer') }}
 )
 

@@ -1,45 +1,55 @@
 {{ config(materialized='incremental') }}
 
-/*
-   Effective Satellite на Линку.
-   Driving Key (Ведущий ключ): ORDER_HK (У одного заказа один клиент).
-*/
-
-WITH stage AS (
+WITH link AS (
     SELECT
         LINK_CUST_ORDER_HK,
-        ORDER_HK AS DRIVING_KEY, -- Заказ - главный объект связи
-        LOAD_DTS,
-        EFFECTIVE_FROM,
-        RECORD_SOURCE
-    FROM {{ ref('stg_orders') }}
+        CUSTOMER_HK,
+        ORDER_HK
+    FROM {{ ref('link_customer_order') }}
+),
+
+stage AS (
+    SELECT DISTINCT
+        LINK.LINK_CUST_ORDER_HK,
+        LINK.LINK_CUST_ORDER_HK AS DRIVING_KEY,
+        LINK.CUSTOMER_HK,
+        LINK.ORDER_HK,
+        O.LOAD_DTS AS START_DATE,
+        O.RECORD_SOURCE
+    FROM link AS LINK
+    INNER JOIN {{ ref('stg_orders') }} AS O
+        ON LINK.ORDER_HK = O.ORDER_HK
 ),
 
 latest_records AS (
     SELECT
         LINK_CUST_ORDER_HK,
         DRIVING_KEY,
-        EFFECTIVE_FROM,
-        LOAD_DTS,
+        CUSTOMER_HK,
+        ORDER_HK,
+        START_DATE,
         RECORD_SOURCE,
-        -- Берем последнюю запись для каждого заказа
         ROW_NUMBER() OVER (
             PARTITION BY DRIVING_KEY
-            ORDER BY EFFECTIVE_FROM DESC, LOAD_DTS DESC
-        ) as rn
+            ORDER BY START_DATE DESC
+        ) AS rn
     FROM stage
 )
 
 SELECT
     LINK_CUST_ORDER_HK,
     DRIVING_KEY,
-    EFFECTIVE_FROM AS START_DATE,
-    '9999-12-31'::TIMESTAMP AS END_DATE, -- В Raw/BV храним открытую дату
-    LOAD_DTS,
+    CUSTOMER_HK,
+    ORDER_HK,
+    START_DATE,
+    NULL::TIMESTAMP AS END_DATE,
     RECORD_SOURCE
 FROM latest_records
 WHERE rn = 1
 
     {% if is_incremental() %}
-  AND LOAD_DTS > (SELECT MAX(LOAD_DTS) FROM {{ this }})
+    AND START_DATE > (
+        SELECT MAX(START_DATE)
+        FROM {{ this }}
+    )
 {% endif %}

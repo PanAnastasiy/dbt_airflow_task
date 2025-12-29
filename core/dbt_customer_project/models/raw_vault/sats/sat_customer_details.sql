@@ -1,26 +1,17 @@
-{{ config(
-    materialized='incremental'
-) }}
+{{ config(materialized='incremental') }}
 
-WITH source_data AS (
-    SELECT
-        CUSTOMER_HK,
-        CUSTOMER_HASHDIFF,
-        first_name,  -- <--- ВАЖНО: Тут должно быть first_name, а не c_name
-        phone,
-        address,
-        segment,
-        LOAD_DTS,
-        EFFECTIVE_FROM,
-        RECORD_SOURCE
-    FROM {{ ref('stg_customers') }}
-)
-
-SELECT * FROM source_data src
-    {% if is_incremental() %}
-WHERE NOT EXISTS (
-    SELECT 1 FROM {{ this }} tgt
-    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
-  AND tgt.CUSTOMER_HASHDIFF = src.CUSTOMER_HASHDIFF
-    )
+SELECT DISTINCT
+    c.CUSTOMER_HK,
+    c.CUSTOMER_ID,
+    c.FIRST_NAME,
+    c.PHONE,
+    c.ADDRESS,
+    c.SEGMENT,
+    c.C_NATIONKEY AS NATIONKEY,
+    c.LOAD_DTS,
+    c.RECORD_SOURCE,
+    c.CUSTOMER_HASHDIFF
+FROM {{ ref('stg_customers') }} AS c
+{% if is_incremental() %}
+WHERE c.LOAD_DTS > (SELECT MAX(LOAD_DTS) FROM {{ this }})
     {% endif %}

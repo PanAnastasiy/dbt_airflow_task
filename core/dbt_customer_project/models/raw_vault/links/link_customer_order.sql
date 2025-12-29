@@ -9,5 +9,8 @@ SELECT DISTINCT
 FROM {{ ref('stg_orders') }}
 WHERE LINK_CUST_ORDER_HK IS NOT NULL
     {% if is_incremental() %}
-  AND LOAD_DTS > (SELECT MAX(LOAD_DTS) FROM {{ this }})
-{% endif %}
+        AND LOAD_DTS > (
+            SELECT MAX(LOAD_DTS)
+            FROM {{ this }}
+        )
+    {% endif %}

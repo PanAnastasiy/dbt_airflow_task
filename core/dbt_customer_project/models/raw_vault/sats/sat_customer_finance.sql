@@ -1,23 +1,34 @@
-{{ config(materialized='incremental') }}
+{{ config(
+    materialized='incremental',
+    unique_key=['CUSTOMER_HK', 'HASHDIFF_FINANCE']
+) }}
 
-WITH source AS (
+WITH SOURCE AS (
     SELECT
         CUSTOMER_HK,
-        HASHDIFF_FINANCE, -- Этот хеш мы теперь генерим в стейдже
-        account_balance,  -- <--- ТЕПЕРЬ ОНА ЕСТЬ
-        '10000' as credit_limit, -- Заглушка (нет в TPCH)
+        HASHDIFF_FINANCE,
+        ACCOUNT_BALANCE,
+        CAST(10000 AS NUMBER) AS CREDIT_LIMIT,
         LOAD_DTS,
         EFFECTIVE_FROM,
         RECORD_SOURCE
     FROM {{ ref('stg_customers') }}
 )
 
-SELECT * FROM source src
+SELECT
+    SRC.CUSTOMER_HK,
+    SRC.HASHDIFF_FINANCE,
+    SRC.ACCOUNT_BALANCE,
+    SRC.CREDIT_LIMIT,
+    SRC.LOAD_DTS,
+    SRC.EFFECTIVE_FROM,
+    SRC.RECORD_SOURCE
+FROM SOURCE AS SRC
     {% if is_incremental() %}
 WHERE NOT EXISTS (
     SELECT 1
-    FROM {{ this }} tgt
-    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
-  AND tgt.HASHDIFF_FINANCE = src.HASHDIFF_FINANCE
+    FROM {{ this }} AS TGT
+    WHERE TGT.CUSTOMER_HK = SRC.CUSTOMER_HK
+  AND TGT.HASHDIFF_FINANCE = SRC.HASHDIFF_FINANCE
     )
     {% endif %}

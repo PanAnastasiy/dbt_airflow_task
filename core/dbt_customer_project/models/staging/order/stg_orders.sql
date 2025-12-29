@@ -14,13 +14,13 @@ WITH SOURCE AS (
 SELECT
     ORDER_ID,
     CUSTOMER_ID,
-    {{ dbt_utils.generate_surrogate_key(['ORDER_ID']) }} AS ORDER_HK,
-    {{ dbt_utils.generate_surrogate_key(['CUSTOMER_ID']) }} AS CUSTOMER_HK,
-    {{ dbt_utils.generate_surrogate_key(['ORDER_ID', 'CUSTOMER_ID']) }} AS LINK_CUST_ORDER_HK,
-    {{ dbt_utils.generate_surrogate_key(['ORDER_STATUS', 'TOTAL_AMOUNT']) }} AS ORDER_HASHDIFF,
+    {{ dbt_utils.generate_surrogate_key(['order_id']) }} AS ORDER_HK,
+    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} AS CUSTOMER_HK,
+    {{ dbt_utils.generate_surrogate_key(['order_id', 'customer_id']) }} AS LINK_CUST_ORDER_HK,
+    {{ dbt_utils.generate_surrogate_key(['order_status', 'total_amount']) }} AS ORDER_HASHDIFF,
     ORDER_DATE AS LOAD_DTS,
     ORDER_DATE AS EFFECTIVE_FROM,
-    RECORD_SOURCE AS RECORD_SOURCE,
+    RECORD_SOURCE,
     ORDER_STATUS,
     TOTAL_AMOUNT
 FROM SOURCE

@@ -1,23 +1,30 @@
-{{ config(
-    materialized='incremental'
-) }}
+{{ config(materialized='incremental') }}
 
-WITH source_data AS (
+WITH SOURCE_DATA AS (
     SELECT
         CUSTOMER_HK,
         VIP_HASHDIFF,
-        vip_status,
+        VIP_STATUS,
         LOAD_DTS,
         EFFECTIVE_FROM,
         RECORD_SOURCE
     FROM {{ ref('stg_vip_customers') }}
 )
 
-SELECT * FROM source_data src
+SELECT
+    SRC.CUSTOMER_HK,
+    SRC.VIP_HASHDIFF,
+    SRC.VIP_STATUS,
+    SRC.LOAD_DTS,
+    SRC.EFFECTIVE_FROM,
+    SRC.RECORD_SOURCE
+FROM SOURCE_DATA AS SRC
     {% if is_incremental() %}
 WHERE NOT EXISTS (
-    SELECT 1 FROM {{ this }} tgt
-    WHERE tgt.CUSTOMER_HK = src.CUSTOMER_HK
-  AND tgt.VIP_HASHDIFF = src.VIP_HASHDIFF
+    SELECT 1
+    FROM {{ this }} AS TGT
+    WHERE TGT.CUSTOMER_HK = SRC.CUSTOMER_HK
+  AND TGT.VIP_HASHDIFF = SRC.VIP_HASHDIFF
     )
     {% endif %}
+
